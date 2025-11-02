@@ -12,6 +12,7 @@ class Match(BaseModel):
     player1: str = Field(..., description="Name of the first player (required)")
     player2: str = Field(..., description="Name of the second player (required)")
     winner: str = Field(..., description="Name of the winning player (required)")
+    tournament: str = Field(..., description="Tournament the match belonged to")
     groupId: str = Field(..., description="Group ID the match belongs to (required)")
 
     class Config:
@@ -51,8 +52,11 @@ async def create_match(match: Match, db: AsyncIOMotorDatabase = Depends(get_data
     match_dict = match.model_dump()
     player1 = await db["players"].find_one({"name": match_dict["player1"], "groupId": match_dict["groupId"]})
     player2 = await db["players"].find_one({"name": match_dict["player2"], "groupId": match_dict["groupId"]})
+    tournament = await db["tournaments"].find_one({"name": match_dict["tournament"], "groupId": match_dict["groupId"]})
     if not player1 or not player2:
         raise ValueError("Both players must exist in the specified group")
+    if not tournament:
+        raise ValueError("Tournament must exist.")
     result = await db["matches"].insert_one(match_dict)
     match_dict["_id"] = str(result.inserted_id)
     return {"match": match_dict}

@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from api.dependencies.mongo import lifespan
 from api.players import player_router
 from api.matches import match_router
+from api.tournaments import tournament_router
 
 load_dotenv()
 
@@ -46,6 +47,7 @@ app.add_middleware(
 
 app.include_router(player_router)
 app.include_router(match_router)
+app.include_router(tournament_router)
 
 @app.get("/")
 async def health():
