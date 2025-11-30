@@ -47,6 +47,18 @@ async def get_matches_by_group(groupId: str, db: AsyncIOMotorDatabase = Depends(
     matches = await db["matches"].find({"groupId": groupId}).to_list()
     return {"matches": [serialize_doc(m) for m in matches]}
 
+@match_router.get("/matches/tournament/{groupId}", tags=["matches"])
+async def get_tournement_matches(groupId: str, db: AsyncIOMotorDatabase = Depends(get_database)):
+    matches = await db["matches"].find({"groupId": groupId}).to_list()
+    tournament_matches = {}
+    for match in matches:
+        print(match)
+        if tournament_matches.get(match['tournament']):
+            tournament_matches[match['tournament']].append(serialize_doc(match))
+        else:
+            tournament_matches[match['tournament']] = [serialize_doc(match)]
+    return {"matches": tournament_matches}
+
 @match_router.post("/matches", tags=["matches"])
 async def create_match(match: Match, db: AsyncIOMotorDatabase = Depends(get_database)):
     match_dict = match.model_dump()

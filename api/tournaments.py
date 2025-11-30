@@ -9,6 +9,7 @@ from api.utils import serialize_doc
 
 class Tournament(BaseModel):
     name: str = Field(..., description="Tournament name (required)")
+    winner: str = Field(..., description="Name of player who won (required)")
     date: str = Field(..., description="Date of the Tournament (required)")
     groupId: str = Field(..., description="Group ID the match belongs to (required)")
 
@@ -33,6 +34,12 @@ async def get_matches_by_group(groupId: str, db: AsyncIOMotorDatabase = Depends(
 @tournament_router.post("/tournaments", tags=["tournaments"])
 async def create_match(match: Tournament, db: AsyncIOMotorDatabase = Depends(get_database)):
     tournament_dict = match.model_dump()
+    tournament_same_name = await db["tournaments"].find_one({"name": tournament_dict["name"], "groupId": tournament_dict["groupId"]})
+    player_exists = await db["players"].find_one({"name": tournament_dict["winner"], "groupId": tournament_dict["groupId"]})
+    if tournament_same_name:
+        raise ValueError("Tournament with the same name and group ID already exists")
+    if not player_exists:
+        raise ValueError(f"Player {tournament_dict["winner"]} does not exists.")
     result = await db["tournaments"].insert_one(tournament_dict)
     tournament_dict["_id"] = str(result.inserted_id)
     return {"tournament": tournament_dict}
