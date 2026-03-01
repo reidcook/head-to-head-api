@@ -34,7 +34,14 @@ class Match(BaseModel):
         if v == values.data["player1"]:
             raise ValueError("player1 and player2 must be different")
         return v
-    
+
+match_fields = [
+    {"field": "player1", "headerName": "Player 1", "mapTo": "players", "formType": "autocomplete"}, 
+    {"field": "player2", "headerName": "Player 2", "mapTo": "players", "formType": "autocomplete"}, 
+    {"field": "winner", "headerName": "Winner", "mapTo": "players", "formType": "autocomplete"}, 
+    {"field": "tournament", "headerName": "Tournament", "mapTo": "tournaments", "formType": "autocomplete"}
+]
+
 match_router = APIRouter()
 
 @match_router.get("/matches/all", tags=["matches"])
@@ -72,6 +79,25 @@ async def create_match(match: Match, db: AsyncIOMotorDatabase = Depends(get_data
     result = await db["matches"].insert_one(match_dict)
     match_dict["_id"] = str(result.inserted_id)
     return {"match": match_dict}
+
+
+@match_router.put("/matches/{match_id}", tags=["matches"])
+async def update_match(match_id: str, match: Match, db: AsyncIOMotorDatabase = Depends(get_database)):
+    match_dict = match.model_dump()
+    # validate existence of referenced resources
+    player1 = await db["players"].find_one({"name": match_dict["player1"], "groupId": match_dict["groupId"]})
+    player2 = await db["players"].find_one({"name": match_dict["player2"], "groupId": match_dict["groupId"]})
+    tournament = await db["tournaments"].find_one({"name": match_dict["tournament"], "groupId": match_dict["groupId"]})
+    if not player1 or not player2:
+        raise ValueError("Both players must exist in the specified group")
+    if not tournament:
+        raise ValueError("Tournament must exist.")
+
+    result = await db["matches"].update_one({"_id": ObjectId(match_id)}, {"$set": match_dict})
+    if result.matched_count == 0:
+        raise ValueError("Match not found")
+    updated = await db["matches"].find_one({"_id": ObjectId(match_id)})
+    return {"match": serialize_doc(updated)}
 
 @match_router.delete("/matches/all", tags=["matches"])
 async def delete_all_matches(db: AsyncIOMotorDatabase = Depends(get_database)):

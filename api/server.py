@@ -1,15 +1,16 @@
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exception_handlers import RequestValidationError
 from fastapi.exceptions import RequestValidationError
 from dotenv import load_dotenv
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
-
-from api.dependencies.mongo import lifespan
-from api.players import player_router
-from api.matches import match_router
-from api.tournaments import tournament_router
+from api.utils import SMASH_CHARS, serialize_doc
+from api.dependencies.mongo import lifespan, get_database
+from api.players import player_router, player_fields
+from api.matches import match_router, match_fields
+from api.tournaments import tournament_router, tournament_fields
 
 load_dotenv()
 
@@ -52,3 +53,22 @@ app.include_router(tournament_router)
 @app.get("/")
 async def health():
     return {"status": "good!"}
+
+@app.get("/admin/config")
+async def model_structure(db: AsyncIOMotorDatabase = Depends(get_database)):
+    enriched_player_fields = await enrich_fields(player_fields.copy(), db)
+    enriched_match_fields = await enrich_fields(match_fields.copy(), db)
+    enriched_tournament_fields = await enrich_fields(tournament_fields.copy(), db)       
+    return {"player": enriched_player_fields, "match": enriched_match_fields.copy(), "tournament": enriched_tournament_fields}
+
+async def enrich_fields(fields, db):
+    options = []
+    for field in fields:
+        if "mapTo" in field: # TODO add to mongo maybe?
+            if field["mapTo"] == "smash_char":
+                options = SMASH_CHARS
+            else:
+                wip_options = await db[field["mapTo"]].find().to_list()
+                options = [m["name"] for m in wip_options]
+            field["options"] = options
+    return fields

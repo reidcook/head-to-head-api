@@ -21,6 +21,12 @@ class Tournament(BaseModel):
 
 tournament_router = APIRouter()
 
+tournament_fields = [
+    {"field": "name", "headerName": "Name", "mapTo": "players", "formType": "autocomplete"}, 
+    {"field": "winner", "headerName": "Winner", "mapTo": "players", "formType": "autocomplete"}, 
+    {"field": "date", "headerName": "Date", "formType": "input"}
+]
+
 @tournament_router.get("/tournaments/all", tags=["tournaments"])
 async def get_all_matches(db: AsyncIOMotorDatabase = Depends(get_database)):
     tournaments = await db["tournaments"].find().to_list()
@@ -39,10 +45,23 @@ async def create_match(match: Tournament, db: AsyncIOMotorDatabase = Depends(get
     if tournament_same_name:
         raise ValueError("Tournament with the same name and group ID already exists")
     if not player_exists:
-        raise ValueError(f"Player {tournament_dict["winner"]} does not exists.")
+        raise ValueError(f"Player {tournament_dict['winner']} does not exists.")
     result = await db["tournaments"].insert_one(tournament_dict)
     tournament_dict["_id"] = str(result.inserted_id)
     return {"tournament": tournament_dict}
+
+
+@tournament_router.put("/tournaments/{tournament_id}", tags=["tournaments"])
+async def update_tournament(tournament_id: str, tournament: Tournament, db: AsyncIOMotorDatabase = Depends(get_database)):
+    tdict = tournament.model_dump()
+    player_exists = await db["players"].find_one({"name": tdict["winner"], "groupId": tdict["groupId"]})
+    if not player_exists:
+        raise ValueError(f"Player {tdict['winner']} does not exists.")
+    result = await db["tournaments"].update_one({"_id": ObjectId(tournament_id)}, {"$set": tdict})
+    if result.matched_count == 0:
+        raise ValueError("Tournament not found")
+    updated = await db["tournaments"].find_one({"_id": ObjectId(tournament_id)})
+    return {"tournament": serialize_doc(updated)}
 
 @tournament_router.delete("/tournaments/all", tags=["tournaments"])
 async def delete_all_matches(db: AsyncIOMotorDatabase = Depends(get_database)):
