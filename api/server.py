@@ -6,11 +6,12 @@ from fastapi.exceptions import RequestValidationError
 from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from api.utils import SMASH_CHARS, serialize_doc
+from api.utils import SMASH_CHARS
 from api.dependencies.mongo import lifespan, get_database
 from api.players import player_router, player_fields
 from api.matches import match_router, match_fields
 from api.tournaments import tournament_router, tournament_fields
+from api.admin_config import FieldConfig
 
 load_dotenv()
 
@@ -61,14 +62,14 @@ async def model_structure(db: AsyncIOMotorDatabase = Depends(get_database)):
     enriched_tournament_fields = await enrich_fields(tournament_fields.copy(), db)       
     return {"player": enriched_player_fields, "match": enriched_match_fields.copy(), "tournament": enriched_tournament_fields}
 
-async def enrich_fields(fields, db):
+async def enrich_fields(fields: list[FieldConfig], db):
     options = []
     for field in fields:
-        if "mapTo" in field: # TODO add to mongo maybe?
-            if field["mapTo"] == "smash_char":
+        if "map_to" in field: # TODO add to mongo maybe?
+            if field["map_to"] == "smash_char":
                 options = SMASH_CHARS
             else:
-                wip_options = await db[field["mapTo"]].find().to_list()
+                wip_options = await db[field["map_to"]].find().to_list()
                 options = [m["name"] for m in wip_options]
             field["options"] = options
     return fields

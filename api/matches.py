@@ -6,6 +6,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from api.dependencies.mongo import get_database
 from api.utils import serialize_doc
+from api.admin_config import FieldConfig
 
 
 class Match(BaseModel):
@@ -35,11 +36,11 @@ class Match(BaseModel):
             raise ValueError("player1 and player2 must be different")
         return v
 
-match_fields = [
-    {"field": "player1", "headerName": "Player 1", "mapTo": "players", "formType": "autocomplete"}, 
-    {"field": "player2", "headerName": "Player 2", "mapTo": "players", "formType": "autocomplete"}, 
-    {"field": "winner", "headerName": "Winner", "mapTo": "players", "formType": "autocomplete"}, 
-    {"field": "tournament", "headerName": "Tournament", "mapTo": "tournaments", "formType": "autocomplete"}
+match_fields: list[FieldConfig] = [
+    {"field": "player1", "headerName": "Player 1", "map_to": "players", "form_type": "autocomplete"}, 
+    {"field": "player2", "headerName": "Player 2", "map_to": "players", "form_type": "autocomplete"}, 
+    {"field": "winner", "headerName": "Winner", "map_to": "players", "form_type": "autocomplete"}, 
+    {"field": "tournament", "headerName": "Tournament", "map_to": "tournaments", "form_type": "autocomplete"}
 ]
 
 match_router = APIRouter()

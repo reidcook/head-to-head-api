@@ -5,7 +5,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from api.dependencies.mongo import get_database
 from api.utils import serialize_doc
-
+from api.admin_config import FieldConfig
 
 class Tournament(BaseModel):
     name: str = Field(..., description="Tournament name (required)")
@@ -21,10 +21,10 @@ class Tournament(BaseModel):
 
 tournament_router = APIRouter()
 
-tournament_fields = [
-    {"field": "name", "headerName": "Name", "mapTo": "players", "formType": "autocomplete"}, 
-    {"field": "winner", "headerName": "Winner", "mapTo": "players", "formType": "autocomplete"}, 
-    {"field": "date", "headerName": "Date", "formType": "input"}
+tournament_fields: FieldConfig = [
+    {"field": "name", "headerName": "Name", "map_to": "tournaments", "form_type": "autocomplete"}, 
+    {"field": "winner", "headerName": "Winner", "map_to": "players", "form_type": "autocomplete"}, 
+    {"field": "date", "headerName": "Date", "form_type": "input"}
 ]
 
 @tournament_router.get("/tournaments/all", tags=["tournaments"])

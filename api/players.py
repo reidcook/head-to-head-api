@@ -7,6 +7,7 @@ from bson import ObjectId
 
 from api.dependencies.mongo import get_database
 from api.utils import serialize_doc
+from api.admin_config import FieldConfig
 
 
 class Player(BaseModel):
@@ -14,6 +15,7 @@ class Player(BaseModel):
     character: str = Field(..., description="Player's character (required)")
     debut: str = Field(..., description="Player's debut tournament (required)")
     image: str = Field(..., description="Player's image (required)")
+    details: str = Field(..., description="Player details (required)")
     groupId: str = Field(..., description="Group ID the player belongs to (required)")
 
     class Config:
@@ -30,12 +32,14 @@ class Player(BaseModel):
 
 player_router = APIRouter()
 
-player_fields = [
-    {"field": "name", "headerName": "Name", "formType": "input"}, 
-    {"field": "character", "headerName": "Character", "formType": "input"}, 
-    {"field": "debut", "headerName": "Debut", "formType": "input"}
+player_fields: list[FieldConfig] = [
+    {"field": "name", "headerName": "Name", "map_to": "players", "form_type": "autocomplete"}, 
+    {"field": "character", "headerName": "Character", "map_to": "smash_char", "form_type": "autocomplete"}, 
+    {"field": "debut", "headerName": "Debut", "map_to": "tournaments", "form_type": "autocomplete"},
+    {"field": "details", "headerName": "Details", "form_type": "input"},
+    {"field": "image", "hide": True, "form_type": "image"},
 ]
-player_match_fields = [
+player_match_fields: list[FieldConfig] = [
     {"field": "opponent", "headerName": "Opponent"}, 
     {"field": "winner", "headerName": "Winner"}, 
     {"field": "tournament", "headerName": "Tournament"}
