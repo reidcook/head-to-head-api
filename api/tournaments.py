@@ -12,6 +12,7 @@ class Tournament(BaseModel):
     winner: str = Field(..., description="Name of player who won (required)")
     date: str = Field(..., description="Date of the Tournament (required)")
     groupId: str = Field(..., description="Group ID the match belongs to (required)")
+    url: str = Field(..., description="URL to tournament")
 
     class Config:
         allow_population_by_field_name = True
