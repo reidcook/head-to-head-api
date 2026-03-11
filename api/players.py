@@ -8,6 +8,7 @@ from bson import ObjectId
 from api.dependencies.mongo import get_database
 from api.utils import serialize_doc
 from api.admin_config import FieldConfig
+from api.utils import SMASH_CHARS
 
 
 class Player(BaseModel):
@@ -15,7 +16,7 @@ class Player(BaseModel):
     character: str = Field(..., description="Player's character (required)")
     debut: str = Field(..., description="Player's debut tournament (required)")
     image: str = Field(..., description="Player's image (required)")
-    details: str = Field(..., description="Player details (required)")
+    details: str = Field("", description="Player details")
     groupId: str = Field(..., description="Group ID the player belongs to (required)")
 
     class Config:
@@ -32,18 +33,6 @@ class Player(BaseModel):
 
 player_router = APIRouter()
 
-player_fields: list[FieldConfig] = [
-    {"field": "name", "headerName": "Name", "map_to": "players", "form_type": "autocomplete"}, 
-    {"field": "character", "headerName": "Character", "map_to": "smash_char", "form_type": "autocomplete"}, 
-    {"field": "debut", "headerName": "Debut", "map_to": "tournaments", "form_type": "autocomplete"},
-    {"field": "details", "headerName": "Details", "form_type": "input"},
-    {"field": "image", "hide": True, "form_type": "image"},
-]
-player_match_fields: list[FieldConfig] = [
-    {"field": "opponent", "headerName": "Opponent"}, 
-    {"field": "winner", "headerName": "Winner"}, 
-    {"field": "tournament", "headerName": "Tournament"}
-]
 
 @player_router.get("/players/all", tags=["players"])
 async def get_all_players(db: AsyncIOMotorDatabase = Depends(get_database)):
@@ -91,7 +80,7 @@ async def get_players_by_group(groupId: str, db: AsyncIOMotorDatabase = Depends(
         p_doc["losses"] = losses
         players_out.append(p_doc)
 
-    return {"players": players_out, "player_display_data": player_fields, "matches_display_data": player_match_fields}
+    return {"players": players_out}
 
 @player_router.post("/players", tags=["players"])
 async def create_player(player: Player, db: AsyncIOMotorDatabase = Depends(get_database)):
@@ -107,22 +96,18 @@ async def create_player(player: Player, db: AsyncIOMotorDatabase = Depends(get_d
     return {"player": player_dict}
 
 
-@player_router.put("/players/{player_id}", tags=["players"])
-async def update_player(player_id: str, player: Player, db: AsyncIOMotorDatabase = Depends(get_database)):
-    player_dict = player.model_dump()
+@player_router.put("/players/{name}/{groupId}", tags=["players"])
+async def update_player(name: str, groupId: str, player_dict: dict, db: AsyncIOMotorDatabase = Depends(get_database)):
     # ensure referenced debut tournament exists
-    tournament_exists = await db["tournaments"].find_one({"name": player_dict["debut"], "groupId": player_dict["groupId"]})
-    if not tournament_exists:
-        raise ValueError(f"Tournament {player_dict['debut']} does not exist.")
-    # ensure no other player in this group has the same name
-    existing = await db["players"].find_one({"name": player_dict["name"], "groupId": player_dict["groupId"], "_id": {"$ne": ObjectId(player_id)}})
-    if existing:
-        raise ValueError("Player with the same name and group ID already exists")
-
-    result = await db["players"].update_one({"_id": ObjectId(player_id)}, {"$set": player_dict})
+    if player_dict.get("debut"):
+        tournament_exists = await db["tournaments"].find_one({"name": player_dict["debut"], "groupId": groupId})
+        if not tournament_exists:
+            raise ValueError(f"Tournament {player_dict['debut']} does not exist.")
+    print(name)
+    result = await db["players"].update_one({"name": name, "groupId": groupId}, {"$set": player_dict})
     if result.matched_count == 0:
         raise ValueError("Player not found")
-    updated = await db["players"].find_one({"_id": ObjectId(player_id)})
+    updated = await db["players"].find_one({"name": name, "groupId": groupId})
     return {"player": serialize_doc(updated)}
 
 @player_router.delete("/players/all", tags=["players"])
@@ -134,3 +119,7 @@ async def delete_all_players(db: AsyncIOMotorDatabase = Depends(get_database)):
 async def delete_player(name: str, groupId: str, db: AsyncIOMotorDatabase = Depends(get_database)):
     result = await db["players"].delete_one({"name": name, "groupId": groupId})
     return {"deleted_count": result.deleted_count}
+
+@player_router.get("/smash_characters", tags=["players"])
+async def get_smash_characters():
+    return {"smash_characters": SMASH_CHARS}

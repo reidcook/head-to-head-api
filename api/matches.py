@@ -36,13 +36,6 @@ class Match(BaseModel):
             raise ValueError("player1 and player2 must be different")
         return v
 
-match_fields: list[FieldConfig] = [
-    {"field": "player1", "headerName": "Player 1", "map_to": "players", "form_type": "autocomplete"}, 
-    {"field": "player2", "headerName": "Player 2", "map_to": "players", "form_type": "autocomplete"}, 
-    {"field": "winner", "headerName": "Winner", "map_to": "players", "form_type": "autocomplete"}, 
-    {"field": "tournament", "headerName": "Tournament", "map_to": "tournaments", "form_type": "autocomplete"}
-]
-
 match_router = APIRouter()
 
 @match_router.get("/matches/all", tags=["matches"])
