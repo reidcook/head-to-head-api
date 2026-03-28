@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, field_validator
 from bson import ObjectId
 
 from api.dependencies.mongo import get_database
+from api.dependencies.auth import verify_admin
 from api.utils import serialize_doc
 from api.admin_config import FieldConfig
 from api.utils import SMASH_CHARS
@@ -83,7 +84,7 @@ async def get_players_by_group(groupId: str, db: AsyncIOMotorDatabase = Depends(
     return {"players": players_out}
 
 @player_router.post("/players", tags=["players"])
-async def create_player(player: Player, db: AsyncIOMotorDatabase = Depends(get_database)):
+async def create_player(player: Player, db: AsyncIOMotorDatabase = Depends(get_database), _=Depends(verify_admin)):
     player_dict = player.model_dump()
     player_same_name = await db["players"].find_one({"name": player_dict["name"], "groupId": player_dict["groupId"]})
     tournament_exists = await db["tournaments"].find_one({"name": player_dict["debut"], "groupId": player_dict["groupId"]})
@@ -97,7 +98,7 @@ async def create_player(player: Player, db: AsyncIOMotorDatabase = Depends(get_d
 
 
 @player_router.put("/players/{name}/{groupId}", tags=["players"])
-async def update_player(name: str, groupId: str, player_dict: dict, db: AsyncIOMotorDatabase = Depends(get_database)):
+async def update_player(name: str, groupId: str, player_dict: dict, db: AsyncIOMotorDatabase = Depends(get_database), _=Depends(verify_admin)):
     # ensure referenced debut tournament exists
     if player_dict.get("debut"):
         tournament_exists = await db["tournaments"].find_one({"name": player_dict["debut"], "groupId": groupId})
@@ -116,7 +117,7 @@ async def delete_all_players(db: AsyncIOMotorDatabase = Depends(get_database)):
     return {"deleted_count": result.deleted_count}
 
 @player_router.delete("/players/{name}/{groupId}", tags=["players"])
-async def delete_player(name: str, groupId: str, db: AsyncIOMotorDatabase = Depends(get_database)):
+async def delete_player(name: str, groupId: str, db: AsyncIOMotorDatabase = Depends(get_database), _=Depends(verify_admin)):
     result = await db["players"].delete_one({"name": name, "groupId": groupId})
     return {"deleted_count": result.deleted_count}
 

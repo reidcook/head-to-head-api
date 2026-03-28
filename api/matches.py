@@ -5,6 +5,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 
 from api.dependencies.mongo import get_database
+from api.dependencies.auth import verify_admin
 from api.utils import serialize_doc
 from api.admin_config import FieldConfig
 
@@ -61,7 +62,7 @@ async def get_tournement_matches(groupId: str, db: AsyncIOMotorDatabase = Depend
     return {"matches": tournament_matches}
 
 @match_router.post("/matches", tags=["matches"])
-async def create_match(match: Match, db: AsyncIOMotorDatabase = Depends(get_database)):
+async def create_match(match: Match, db: AsyncIOMotorDatabase = Depends(get_database), _=Depends(verify_admin)):
     match_dict = match.model_dump()
     player1 = await db["players"].find_one({"name": match_dict["player1"], "groupId": match_dict["groupId"]})
     player2 = await db["players"].find_one({"name": match_dict["player2"], "groupId": match_dict["groupId"]})
@@ -76,7 +77,7 @@ async def create_match(match: Match, db: AsyncIOMotorDatabase = Depends(get_data
 
 
 @match_router.put("/matches/{match_id}", tags=["matches"])
-async def update_match(match_id: str, match: Match, db: AsyncIOMotorDatabase = Depends(get_database)):
+async def update_match(match_id: str, match: Match, db: AsyncIOMotorDatabase = Depends(get_database), _=Depends(verify_admin)):
     match_dict = match.model_dump()
     # validate existence of referenced resources
     player1 = await db["players"].find_one({"name": match_dict["player1"], "groupId": match_dict["groupId"]})
@@ -99,6 +100,6 @@ async def delete_all_matches(db: AsyncIOMotorDatabase = Depends(get_database)):
     return {"deleted_count": result.deleted_count}
 
 @match_router.delete("/matches/{match_id}", tags=["matches"])
-async def delete_match(match_id: str, db: AsyncIOMotorDatabase = Depends(get_database)):
+async def delete_match(match_id: str, db: AsyncIOMotorDatabase = Depends(get_database), _=Depends(verify_admin)):
     result = await db["matches"].delete_one({"_id": ObjectId(match_id)})
     return {"deleted_count": result.deleted_count}

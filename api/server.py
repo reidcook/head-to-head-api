@@ -1,3 +1,7 @@
+import os
+
+import firebase_admin
+from firebase_admin import credentials
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -7,13 +11,18 @@ from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from api.dependencies.mongo import lifespan, get_database
-from api.players import player_router
-from api.matches import match_router
-from api.tournaments import tournament_router
-from api.admin_config import FieldConfig
 
 load_dotenv()
 
+_service_account_path = os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH")
+if _service_account_path:
+    _cred = credentials.Certificate(_service_account_path)
+    firebase_admin.initialize_app(_cred)
+from api.players import player_router
+from api.matches import match_router
+from api.tournaments import tournament_router
+from api.overview import overview_router
+from api.admin_config import FieldConfig
 
 origins = [
     "https://localhost:5173"
@@ -49,6 +58,7 @@ app.add_middleware(
 app.include_router(player_router)
 app.include_router(match_router)
 app.include_router(tournament_router)
+app.include_router(overview_router)
 
 @app.get("/")
 async def health():

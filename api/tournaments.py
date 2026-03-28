@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from api.dependencies.mongo import get_database
+from api.dependencies.auth import verify_admin
 from api.utils import serialize_doc
 from api.admin_config import FieldConfig
 
@@ -33,7 +34,7 @@ async def get_matches_by_group(groupId: str, db: AsyncIOMotorDatabase = Depends(
     return {"tournaments": [serialize_doc(m) for m in tournaments]}
 
 @tournament_router.post("/tournaments", tags=["tournaments"])
-async def create_match(match: Tournament, db: AsyncIOMotorDatabase = Depends(get_database)):
+async def create_match(match: Tournament, db: AsyncIOMotorDatabase = Depends(get_database), _=Depends(verify_admin)):
     tournament_dict = match.model_dump()
     tournament_same_name = await db["tournaments"].find_one({"name": tournament_dict["name"], "groupId": tournament_dict["groupId"]})
     player_exists = await db["players"].find_one({"name": tournament_dict["winner"], "groupId": tournament_dict["groupId"]})
@@ -47,15 +48,15 @@ async def create_match(match: Tournament, db: AsyncIOMotorDatabase = Depends(get
 
 
 @tournament_router.put("/tournaments/{name}/{groupId}", tags=["tournaments"])
-async def update_tournament(name: str, groupId: str, tournament: Tournament, db: AsyncIOMotorDatabase = Depends(get_database)):
-    tdict = tournament.model_dump()
-    player_exists = await db["players"].find_one({"name": tdict["winner"], "groupId": tdict["groupId"]})
-    if not player_exists:
-        raise ValueError(f"Player {tdict['winner']} does not exists.")
-    result = await db["tournaments"].update_one({"name": name, "groupId": groupId}, {"$set": tdict})
+async def update_tournament(name: str, groupId: str, tournament: dict, db: AsyncIOMotorDatabase = Depends(get_database), _=Depends(verify_admin)):
+    if tournament.get("winner"):
+        player_exists = await db["players"].find_one({"name": tournament["winner"], "groupId": tournament["groupId"]})
+        if not player_exists:
+            raise ValueError(f"Player {tournament['winner']} does not exists.")
+    result = await db["tournaments"].update_one({"name": name, "groupId": groupId}, {"$set": tournament})
     if result.matched_count == 0:
         raise ValueError("Tournament not found")
-    updated = await db["tournaments"].find_one({"name": tdict["name"], "groupId": tdict["groupId"]})
+    updated = await db["tournaments"].find_one({"name": tournament["name"], "groupId": tournament["groupId"]})
     return {"tournament": serialize_doc(updated)}
 
 @tournament_router.delete("/tournaments/all", tags=["tournaments"])
@@ -64,6 +65,6 @@ async def delete_all_matches(db: AsyncIOMotorDatabase = Depends(get_database)):
     return {"deleted_count": result.deleted_count}
 
 @tournament_router.delete("/tournaments/{name}/{groupId}", tags=["tournaments"])
-async def delete_tournament(name: str, groupId: str, db: AsyncIOMotorDatabase = Depends(get_database)):
+async def delete_tournament(name: str, groupId: str, db: AsyncIOMotorDatabase = Depends(get_database), _=Depends(verify_admin)):
     result = await db["tournaments"].delete_one({"name": name, "groupId": groupId})
     return {"deleted_count": result.deleted_count}
