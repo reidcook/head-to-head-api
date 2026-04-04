@@ -1,5 +1,6 @@
 import os
 
+from mangum import Mangum
 import firebase_admin
 from firebase_admin import credentials
 from fastapi import Depends, FastAPI, Request
@@ -14,15 +15,18 @@ from api.dependencies.mongo import lifespan, get_database
 
 load_dotenv()
 
-_service_account_path = os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH")
-if _service_account_path:
-    _cred = credentials.Certificate(_service_account_path)
-    firebase_admin.initialize_app(_cred)
+
 from api.players import player_router
 from api.matches import match_router
 from api.tournaments import tournament_router
 from api.overview import overview_router
 from api.admin_config import FieldConfig
+
+_service_account_json = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
+if _service_account_json:
+    import json
+    _cred = credentials.Certificate(json.loads(_service_account_json))
+    firebase_admin.initialize_app(_cred)
 
 origins = [
     "https://localhost:5173"
@@ -63,3 +67,5 @@ app.include_router(overview_router)
 @app.get("/")
 async def health():
     return {"status": "good!"}
+
+handler = Mangum(app)

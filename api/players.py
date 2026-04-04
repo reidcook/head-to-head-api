@@ -15,9 +15,9 @@ from api.utils import SMASH_CHARS
 class Player(BaseModel):
     name: str = Field(..., description="Player's name (required)")
     character: str = Field(..., description="Player's character (required)")
-    debut: str = Field(..., description="Player's debut tournament (required)")
+    debut: str = Field(description="Player's debut tournament", default="")
     image: str = Field(..., description="Player's image (required)")
-    details: str = Field("", description="Player details")
+    details: str = Field(description="Player details", default="")
     groupId: str = Field(..., description="Group ID the player belongs to (required)")
 
     class Config:
@@ -87,7 +87,9 @@ async def get_players_by_group(groupId: str, db: AsyncIOMotorDatabase = Depends(
 async def create_player(player: Player, db: AsyncIOMotorDatabase = Depends(get_database), _=Depends(verify_admin)):
     player_dict = player.model_dump()
     player_same_name = await db["players"].find_one({"name": player_dict["name"], "groupId": player_dict["groupId"]})
-    tournament_exists = await db["tournaments"].find_one({"name": player_dict["debut"], "groupId": player_dict["groupId"]})
+    tournament_exists = True
+    if player_dict.get("debut"):
+        tournament_exists = await db["tournaments"].find_one({"name": player_dict["debut"], "groupId": player_dict["groupId"]})
     if player_same_name:
         raise ValueError("Player with the same name and group ID already exists")
     if not tournament_exists:
