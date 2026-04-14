@@ -29,7 +29,9 @@ if _service_account_json:
     firebase_admin.initialize_app(_cred)
 
 origins = [
-    "https://localhost:5173"
+    "http://localhost:5173",
+    "https://localhost:5173",
+    "https://romega.club",
 ]
 
 
@@ -53,7 +55,7 @@ async def validation_exception_handler(request: Request, exc: ValueError):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"]
