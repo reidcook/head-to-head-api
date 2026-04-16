@@ -7,7 +7,7 @@ from bson import ObjectId
 
 from api.dependencies.mongo import get_database
 from api.dependencies.auth import verify_admin
-from api.utils import serialize_doc
+from api.utils import serialize_doc, upload_image_to_s3
 from api.admin_config import FieldConfig
 from api.utils import SMASH_CHARS
 
@@ -94,6 +94,9 @@ async def create_player(player: Player, db: AsyncIOMotorDatabase = Depends(get_d
         raise ValueError("Player with the same name and group ID already exists")
     if not tournament_exists:
         raise ValueError(f"Tournament {player_dict['debut']} does not exist.")
+    # If image is base64, upload to S3 and store the URL instead
+    if player_dict.get("image", "").startswith("data:") or (len(player_dict.get("image", "")) > 500 and "/" not in player_dict.get("image", "")[:30]):
+        player_dict["image"] = upload_image_to_s3(player_dict["name"], player_dict["image"])
     result = await db["players"].insert_one(player_dict)
     player_dict["_id"] = str(result.inserted_id)
     return {"player": player_dict}
@@ -106,7 +109,9 @@ async def update_player(name: str, groupId: str, player_dict: dict, db: AsyncIOM
         tournament_exists = await db["tournaments"].find_one({"name": player_dict["debut"], "groupId": groupId})
         if not tournament_exists:
             raise ValueError(f"Tournament {player_dict['debut']} does not exist.")
-    print(name)
+    # If image is base64, upload to S3 and store the URL instead
+    if player_dict.get("image") and (player_dict["image"].startswith("data:") or (len(player_dict["image"]) > 500 and "/" not in player_dict["image"][:30])):
+        player_dict["image"] = upload_image_to_s3(name, player_dict["image"])
     result = await db["players"].update_one({"name": name, "groupId": groupId}, {"$set": player_dict})
     if result.matched_count == 0:
         raise ValueError("Player not found")

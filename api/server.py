@@ -3,15 +3,13 @@ import os
 from mangum import Mangum
 import firebase_admin
 from firebase_admin import credentials
-from fastapi import Depends, FastAPI, Request
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.exception_handlers import RequestValidationError
 from fastapi.exceptions import RequestValidationError
 from dotenv import load_dotenv
-from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from api.dependencies.mongo import lifespan, get_database
+from api.dependencies.mongo import lifespan
 
 load_dotenv()
 
@@ -29,8 +27,8 @@ if _service_account_json:
     firebase_admin.initialize_app(_cred)
 
 origins = [
-    "http://localhost:5173",
-    "https://localhost:5173",
+    "http://localhost:4200",
+    "https://localhost:4200",
     "https://romega.club",
 ]
 
@@ -43,14 +41,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return JSONResponse(
         status_code=400,
         content={"error": [err['msg'] for err in exc.errors()]},
-    )
-
-# Global handler for Pydantic validation errors
-@app.exception_handler(ValueError)
-async def validation_exception_handler(request: Request, exc: ValueError):
-    return JSONResponse(
-        status_code=400,
-        content={"error": [str(exc)]},
     )
 
 app.add_middleware(
