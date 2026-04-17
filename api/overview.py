@@ -118,7 +118,7 @@ async def get_tournaments_per_year(groupId: str, db: AsyncIOMotorDatabase = Depe
         t_doc = serialize_doc(t)
         date_str = t_doc.get("date", "")
         try:
-            year = str(datetime.strptime(date_str, "%m-%d-%Y").year)
+            year = str(datetime.strptime(date_str, "%m/%d/%Y").year)
             year_counts[year] = year_counts.get(year, 0) + 1
         except (ValueError, TypeError):
             pass
