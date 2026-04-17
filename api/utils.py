@@ -17,7 +17,7 @@ def upload_image_to_s3(name: str, base64_image: str) -> str:
     key = f"players/{name}.{ext}"
 
     # For local development
-    if os.environ.get("AWS_ACCESS_KEY_ID"):
+    if os.environ.get("LOCAL_ENV"):
         s3 = boto3.client(
             "s3",
             aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
