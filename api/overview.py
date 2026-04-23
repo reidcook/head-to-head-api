@@ -60,7 +60,7 @@ async def get_players_by_tournament_wins(groupId: str, db: AsyncIOMotorDatabase 
 
     result = []
     for p in players:
-        name = serialize_doc(p).get("name")
+        name = serialize_doc(p).get("name", "")
         result.append({"name": name, "tournament_wins": tourn_wins.get(name, 0)})
 
     result.sort(key=lambda x: x["tournament_wins"], reverse=True)
